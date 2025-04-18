@@ -1,0 +1,28 @@
+{
+  "name": "vue-monorepo",
+  "version": "1.0.0",
+  "description": "Vue monorepo with Vue 2 and Vue 3 packages",
+  "private": true,
+  "scripts": {
+    "dev:vue3": "pnpm --filter ui-vue3 dev",
+    "dev:vue2": "pnpm --filter ui-vue2 dev",
+    "dev:ce": "pnpm --filter ui-ce dev",
+    "storybook:vue3": "pnpm --filter ui-vue3 storybook",
+    "storybook:vue2": "pnpm --filter ui-vue2 storybook",
+    "build:vue3": "pnpm --filter ui-vue3 build",
+    "build:vue2": "pnpm --filter ui-vue2 build",
+    "build:ce": "pnpm --filter ui-ce build",
+    "build": "pnpm build:vue3 && pnpm build:ce && pnpm build:vue2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "pnpm": ">=7.0.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@vue/runtime-core@3.5.13": "patches/@vue__runtime-core@3.5.13.patch",
+      "@vue/runtime-dom@3.5.13": "patches/@vue__runtime-dom@3.5.13.patch"
+    }
+  },
+  "packageManager": "pnpm@7.33.6"
+}

@@ -1,0 +1,419 @@
+diff --git a/dist/runtime-core.cjs.js b/dist/runtime-core.cjs.js
+index 4307f0323a8fe3d0fa2ca5e7a4f633c38472bbc5..f26e887b20920459cc92684f1f3e2a3eb8b6a80e 100644
+--- a/dist/runtime-core.cjs.js
++++ b/dist/runtime-core.cjs.js
+@@ -348,11 +348,11 @@ function flushPreFlushCbs(instance, seen, i = flushIndex + 1) {
+       queue.splice(i, 1);
+       i--;
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       cb();
+       if (!(cb.flags & 4)) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+     }
+   }
+@@ -377,10 +377,10 @@ function flushPostFlushCbs(seen) {
+         continue;
+       }
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       if (!(cb.flags & 8)) cb();
+-      cb.flags &= ~1;
++      cb.flags &= -2;
+     }
+     activePostFlushCbs = null;
+     postFlushIndex = 0;
+@@ -416,7 +416,7 @@ function flushJobs(seen) {
+     for (; flushIndex < queue.length; flushIndex++) {
+       const job = queue[flushIndex];
+       if (job) {
+-        job.flags &= ~1;
++        job.flags &= -2;
+       }
+     }
+     flushIndex = -1;
+@@ -2677,7 +2677,7 @@ const KeepAliveImpl = {
+       );
+       const { include, exclude, max } = props;
+       if (include && (!name || !matches(include, name)) || exclude && name && matches(exclude, name)) {
+-        vnode.shapeFlag &= ~256;
++        vnode.shapeFlag &= -257;
+         current = vnode;
+         return rawVNode;
+       }
+@@ -2764,8 +2764,8 @@ function injectToKeepAliveRoot(hook, type, target, keepAliveRoot) {
+   }, target);
+ }
+ function resetShapeFlag(vnode) {
+-  vnode.shapeFlag &= ~256;
+-  vnode.shapeFlag &= ~512;
++  vnode.shapeFlag &= -257;
++  vnode.shapeFlag &= -513;
+ }
+ function getInnerChild(vnode) {
+   return vnode.shapeFlag & 128 ? vnode.ssContent : vnode;
+@@ -2982,6 +2982,7 @@ function renderSlot(slots, name, props = {}, fallback, noSlotted) {
+   if (slot && slot._c) {
+     slot._d = true;
+   }
++  rendered.slotName = name;
+   return rendered;
+ }
+ function ensureValidVNode(vnodes) {
+@@ -4986,6 +4987,9 @@ function baseCreateRenderer(options, createHydrationFns) {
+         dirs && invokeDirectiveHook(n2, n1, parentComponent, "updated");
+       }, parentSuspense);
+     }
++    if (el._isVueCE && el._def.shadowRoot === false) {
++      el._updateSlots(n2.children);
++    }
+   };
+   const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent, parentSuspense, namespace, slotScopeIds) => {
+     for (let i = 0; i < newChildren.length; i++) {
+@@ -5724,7 +5728,13 @@ function baseCreateRenderer(options, createHydrationFns) {
+         queuePostRenderEffect(() => transition.enter(el), parentSuspense);
+       } else {
+         const { leave, delayLeave, afterLeave } = transition;
+-        const remove2 = () => hostInsert(el, container, anchor);
++        const remove2 = () => {
++          if (vnode.ctx.isUnmounted) {
++            hostRemove(el);
++          } else {
++            hostInsert(el, container, anchor);
++          }
++        };
+         const performLeave = () => {
+           leave(el, () => {
+             remove2();
+@@ -5970,8 +5980,8 @@ function toggleRecurse({ effect, job }, allowed) {
+     effect.flags |= 32;
+     job.flags |= 4;
+   } else {
+-    effect.flags &= ~32;
+-    job.flags &= ~4;
++    effect.flags &= -33;
++    job.flags &= -5;
+   }
+ }
+ function needTransition(parentSuspense, transition) {
+@@ -7343,8 +7353,8 @@ function isSameVNodeType(n1, n2) {
+   if (n2.shapeFlag & 6 && n1.component) {
+     const dirtyInstances = hmrDirtyComponents.get(n2.type);
+     if (dirtyInstances && dirtyInstances.has(n1.component)) {
+-      n1.shapeFlag &= ~256;
+-      n2.shapeFlag &= ~512;
++      n1.shapeFlag &= -257;
++      n2.shapeFlag &= -513;
+       return false;
+     }
+   }
+@@ -7537,7 +7547,8 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
+     el: vnode.el,
+     anchor: vnode.anchor,
+     ctx: vnode.ctx,
+-    ce: vnode.ce
++    ce: vnode.ce,
++    slotName: vnode.slotName
+   };
+   if (transition && cloneTransition) {
+     setTransitionHooks(
+@@ -8136,13 +8147,15 @@ function initCustomFormatter() {
+       if (obj.__isVue) {
+         return ["div", vueStyle, `VueInstance`];
+       } else if (reactivity.isRef(obj)) {
++        reactivity.pauseTracking();
++        const value = obj.value;
++        reactivity.resetTracking();
+         return [
+           "div",
+           {},
+           ["span", vueStyle, genRefFlag(obj)],
+           "<",
+-          // avoid debugger accessing value affecting behavior
+-          formatValue("_value" in obj ? obj._value : obj),
++          formatValue(value),
+           `>`
+         ];
+       } else if (reactivity.isReactive(obj)) {
+diff --git a/dist/runtime-core.cjs.prod.js b/dist/runtime-core.cjs.prod.js
+index a2ed5e5d05908e890c6bdd533111c0f8cb65a704..2557936e992de13842f165e14604f9fc745a4df7 100644
+--- a/dist/runtime-core.cjs.prod.js
++++ b/dist/runtime-core.cjs.prod.js
+@@ -213,11 +213,11 @@ function flushPreFlushCbs(instance, seen, i = flushIndex + 1) {
+       queue.splice(i, 1);
+       i--;
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       cb();
+       if (!(cb.flags & 4)) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+     }
+   }
+@@ -236,10 +236,10 @@ function flushPostFlushCbs(seen) {
+     for (postFlushIndex = 0; postFlushIndex < activePostFlushCbs.length; postFlushIndex++) {
+       const cb = activePostFlushCbs[postFlushIndex];
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       if (!(cb.flags & 8)) cb();
+-      cb.flags &= ~1;
++      cb.flags &= -2;
+     }
+     activePostFlushCbs = null;
+     postFlushIndex = 0;
+@@ -269,7 +269,7 @@ function flushJobs(seen) {
+     for (; flushIndex < queue.length; flushIndex++) {
+       const job = queue[flushIndex];
+       if (job) {
+-        job.flags &= ~1;
++        job.flags &= -2;
+       }
+     }
+     flushIndex = -1;
+@@ -2028,7 +2028,7 @@ const KeepAliveImpl = {
+       );
+       const { include, exclude, max } = props;
+       if (include && (!name || !matches(include, name)) || exclude && name && matches(exclude, name)) {
+-        vnode.shapeFlag &= ~256;
++        vnode.shapeFlag &= -257;
+         current = vnode;
+         return rawVNode;
+       }
+@@ -2115,8 +2115,8 @@ function injectToKeepAliveRoot(hook, type, target, keepAliveRoot) {
+   }, target);
+ }
+ function resetShapeFlag(vnode) {
+-  vnode.shapeFlag &= ~256;
+-  vnode.shapeFlag &= ~512;
++  vnode.shapeFlag &= -257;
++  vnode.shapeFlag &= -513;
+ }
+ function getInnerChild(vnode) {
+   return vnode.shapeFlag & 128 ? vnode.ssContent : vnode;
+@@ -2310,6 +2310,7 @@ function renderSlot(slots, name, props = {}, fallback, noSlotted) {
+   if (slot && slot._c) {
+     slot._d = true;
+   }
++  rendered.slotName = name;
+   return rendered;
+ }
+ function ensureValidVNode(vnodes) {
+@@ -3785,6 +3786,9 @@ function baseCreateRenderer(options, createHydrationFns) {
+         dirs && invokeDirectiveHook(n2, n1, parentComponent, "updated");
+       }, parentSuspense);
+     }
++    if (el._isVueCE && el._def.shadowRoot === false) {
++      el._updateSlots(n2.children);
++    }
+   };
+   const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent, parentSuspense, namespace, slotScopeIds) => {
+     for (let i = 0; i < newChildren.length; i++) {
+@@ -4443,7 +4447,13 @@ function baseCreateRenderer(options, createHydrationFns) {
+         queuePostRenderEffect(() => transition.enter(el), parentSuspense);
+       } else {
+         const { leave, delayLeave, afterLeave } = transition;
+-        const remove2 = () => hostInsert(el, container, anchor);
++        const remove2 = () => {
++          if (vnode.ctx.isUnmounted) {
++            hostRemove(el);
++          } else {
++            hostInsert(el, container, anchor);
++          }
++        };
+         const performLeave = () => {
+           leave(el, () => {
+             remove2();
+@@ -4675,8 +4685,8 @@ function toggleRecurse({ effect, job }, allowed) {
+     effect.flags |= 32;
+     job.flags |= 4;
+   } else {
+-    effect.flags &= ~32;
+-    job.flags &= ~4;
++    effect.flags &= -33;
++    job.flags &= -5;
+   }
+ }
+ function needTransition(parentSuspense, transition) {
+@@ -6022,7 +6032,8 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
+     el: vnode.el,
+     anchor: vnode.anchor,
+     ctx: vnode.ctx,
+-    ce: vnode.ce
++    ce: vnode.ce,
++    slotName: vnode.slotName
+   };
+   if (transition && cloneTransition) {
+     setTransitionHooks(
+diff --git a/dist/runtime-core.esm-bundler.js b/dist/runtime-core.esm-bundler.js
+index ec24dbd7b37b3d35a9f3501ed528b94405eca2ad..10402c27ee72d91988b8b82b9e2ec0a7d815eec8 100644
+--- a/dist/runtime-core.esm-bundler.js
++++ b/dist/runtime-core.esm-bundler.js
+@@ -5,7 +5,7 @@
+ **/
+ import { pauseTracking, resetTracking, isRef, toRaw, traverse, shallowRef, readonly, isReactive, ref, isShallow, shallowReadArray, toReactive, shallowReadonly, track, reactive, shallowReactive, trigger, ReactiveEffect, watch as watch$1, customRef, isProxy, proxyRefs, markRaw, EffectScope, computed as computed$1, isReadonly } from '@vue/reactivity';
+ export { EffectScope, ReactiveEffect, TrackOpTypes, TriggerOpTypes, customRef, effect, effectScope, getCurrentScope, getCurrentWatcher, isProxy, isReactive, isReadonly, isRef, isShallow, markRaw, onScopeDispose, onWatcherCleanup, proxyRefs, reactive, readonly, ref, shallowReactive, shallowReadonly, shallowRef, stop, toRaw, toRef, toRefs, toValue, triggerRef, unref } from '@vue/reactivity';
+-import { isString, isFunction, isPromise, isArray, EMPTY_OBJ, NOOP, getGlobalThis, extend, isBuiltInDirective, hasOwn, remove, def, isOn, isReservedProp, normalizeClass, stringifyStyle, normalizeStyle, isKnownSvgAttr, isBooleanAttr, isKnownHtmlAttr, includeBooleanAttr, isRenderableAttrValue, getEscapedCssVarName, isObject, isRegExp, invokeArrayFns, toHandlerKey, capitalize, camelize, isSymbol, isGloballyAllowed, NO, hyphenate, EMPTY_ARR, toRawType, makeMap, hasChanged, looseToNumber, isModelListener, toNumber } from '@vue/shared';
++import { isString, isFunction, EMPTY_OBJ, isPromise, isArray, NOOP, getGlobalThis, extend, isBuiltInDirective, hasOwn, remove, def, isOn, isReservedProp, normalizeClass, stringifyStyle, normalizeStyle, isKnownSvgAttr, isBooleanAttr, isKnownHtmlAttr, includeBooleanAttr, isRenderableAttrValue, getEscapedCssVarName, isObject, isRegExp, invokeArrayFns, toHandlerKey, camelize, capitalize, isSymbol, isGloballyAllowed, NO, EMPTY_ARR, hyphenate, makeMap, toRawType, hasChanged, looseToNumber, isModelListener, toNumber } from '@vue/shared';
+ export { camelize, capitalize, normalizeClass, normalizeProps, normalizeStyle, toDisplayString, toHandlerKey } from '@vue/shared';
+ 
+ const stack = [];
+@@ -351,11 +351,11 @@ function flushPreFlushCbs(instance, seen, i = flushIndex + 1) {
+       queue.splice(i, 1);
+       i--;
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       cb();
+       if (!(cb.flags & 4)) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+     }
+   }
+@@ -380,10 +380,10 @@ function flushPostFlushCbs(seen) {
+         continue;
+       }
+       if (cb.flags & 4) {
+-        cb.flags &= ~1;
++        cb.flags &= -2;
+       }
+       if (!(cb.flags & 8)) cb();
+-      cb.flags &= ~1;
++      cb.flags &= -2;
+     }
+     activePostFlushCbs = null;
+     postFlushIndex = 0;
+@@ -419,7 +419,7 @@ function flushJobs(seen) {
+     for (; flushIndex < queue.length; flushIndex++) {
+       const job = queue[flushIndex];
+       if (job) {
+-        job.flags &= ~1;
++        job.flags &= -2;
+       }
+     }
+     flushIndex = -1;
+@@ -2605,6 +2605,9 @@ const KeepAliveImpl = {
+       if (!!(process.env.NODE_ENV !== "production") || __VUE_PROD_DEVTOOLS__) {
+         devtoolsComponentAdded(instance2);
+       }
++      if (!!(process.env.NODE_ENV !== "production") && true) {
++        instance2.__keepAliveStorageContainer = storageContainer;
++      }
+     };
+     function unmount(vnode) {
+       resetShapeFlag(vnode);
+@@ -2692,7 +2695,7 @@ const KeepAliveImpl = {
+       );
+       const { include, exclude, max } = props;
+       if (include && (!name || !matches(include, name)) || exclude && name && matches(exclude, name)) {
+-        vnode.shapeFlag &= ~256;
++        vnode.shapeFlag &= -257;
+         current = vnode;
+         return rawVNode;
+       }
+@@ -2779,8 +2782,8 @@ function injectToKeepAliveRoot(hook, type, target, keepAliveRoot) {
+   }, target);
+ }
+ function resetShapeFlag(vnode) {
+-  vnode.shapeFlag &= ~256;
+-  vnode.shapeFlag &= ~512;
++  vnode.shapeFlag &= -257;
++  vnode.shapeFlag &= -513;
+ }
+ function getInnerChild(vnode) {
+   return vnode.shapeFlag & 128 ? vnode.ssContent : vnode;
+@@ -2997,6 +3000,7 @@ function renderSlot(slots, name, props = {}, fallback, noSlotted) {
+   if (slot && slot._c) {
+     slot._d = true;
+   }
++  rendered.slotName = name;
+   return rendered;
+ }
+ function ensureValidVNode(vnodes) {
+@@ -5032,6 +5036,9 @@ function baseCreateRenderer(options, createHydrationFns) {
+         dirs && invokeDirectiveHook(n2, n1, parentComponent, "updated");
+       }, parentSuspense);
+     }
++    if (el._isVueCE && el._def.shadowRoot === false) {
++      el._updateSlots(n2.children);
++    }
+   };
+   const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent, parentSuspense, namespace, slotScopeIds) => {
+     for (let i = 0; i < newChildren.length; i++) {
+@@ -5781,7 +5788,13 @@ function baseCreateRenderer(options, createHydrationFns) {
+         queuePostRenderEffect(() => transition.enter(el), parentSuspense);
+       } else {
+         const { leave, delayLeave, afterLeave } = transition;
+-        const remove2 = () => hostInsert(el, container, anchor);
++        const remove2 = () => {
++          if (vnode.ctx.isUnmounted) {
++            hostRemove(el);
++          } else {
++            hostInsert(el, container, anchor);
++          }
++        };
+         const performLeave = () => {
+           leave(el, () => {
+             remove2();
+@@ -6027,8 +6040,8 @@ function toggleRecurse({ effect, job }, allowed) {
+     effect.flags |= 32;
+     job.flags |= 4;
+   } else {
+-    effect.flags &= ~32;
+-    job.flags &= ~4;
++    effect.flags &= -33;
++    job.flags &= -5;
+   }
+ }
+ function needTransition(parentSuspense, transition) {
+@@ -7400,8 +7413,8 @@ function isSameVNodeType(n1, n2) {
+   if (!!(process.env.NODE_ENV !== "production") && n2.shapeFlag & 6 && n1.component) {
+     const dirtyInstances = hmrDirtyComponents.get(n2.type);
+     if (dirtyInstances && dirtyInstances.has(n1.component)) {
+-      n1.shapeFlag &= ~256;
+-      n2.shapeFlag &= ~512;
++      n1.shapeFlag &= -257;
++      n2.shapeFlag &= -513;
+       return false;
+     }
+   }
+@@ -7594,7 +7607,8 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
+     el: vnode.el,
+     anchor: vnode.anchor,
+     ctx: vnode.ctx,
+-    ce: vnode.ce
++    ce: vnode.ce,
++    slotName: vnode.slotName
+   };
+   if (transition && cloneTransition) {
+     setTransitionHooks(
+@@ -8207,13 +8221,15 @@ function initCustomFormatter() {
+       if (obj.__isVue) {
+         return ["div", vueStyle, `VueInstance`];
+       } else if (isRef(obj)) {
++        pauseTracking();
++        const value = obj.value;
++        resetTracking();
+         return [
+           "div",
+           {},
+           ["span", vueStyle, genRefFlag(obj)],
+           "<",
+-          // avoid debugger accessing value affecting behavior
+-          formatValue("_value" in obj ? obj._value : obj),
++          formatValue(value),
+           `>`
+         ];
+       } else if (isReactive(obj)) {

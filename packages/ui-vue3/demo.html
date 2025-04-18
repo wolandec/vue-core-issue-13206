@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Custom Elements Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      color: #333;
+    }
+
+    .demo-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .buttons-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .container-content {
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+    }
+
+    .controls {
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>UI Custom Elements Demo</h1>
+
+  <h2>Button Component</h2>
+  <div class="demo-section">
+    <h3>Button Variants</h3>
+    <div class="buttons-container">
+      <ui-button variant="primary">Primary Button</ui-button>
+      <ui-button variant="secondary">Secondary Button</ui-button>
+      <ui-button variant="danger">Danger Button</ui-button>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h3>Button Sizes</h3>
+    <div class="buttons-container">
+      <ui-button size="small">Small Button</ui-button>
+      <ui-button size="medium">Medium Button</ui-button>
+      <ui-button size="large">Large Button</ui-button>
+    </div>
+  </div>
+
+  <div class="demo-section">
+    <h3>Event Handling</h3>
+    <div>
+      <ui-button id="clickButton">Click Me</ui-button>
+      <p id="clickResult">Button not clicked yet</p>
+    </div>
+  </div>
+
+  <h2>UI Container Component</h2>
+  <div class="demo-section">
+    <h3>Container Visibility</h3>
+    <div class="controls">
+      <label>
+        <input type="checkbox" id="containerVisibility" checked>
+        Show Container
+      </label>
+    </div>
+    <ui-container-ce id="demoContainer" is-shown="true">
+      <div class="container-content">
+        <h4>Container Content</h4>
+        <p>This content is inside the UI Container custom element.</p>
+        <p>You can toggle the visibility using the checkbox above.</p>
+      </div>
+    </ui-container-ce>
+  </div>
+
+  <script type="module">
+    // Import the libraries (adjust the paths as needed)
+    import { ButtonElement } from './dist/ui-vue3.es.js';
+    import { UIContainerElement } from '../ui-ce/dist/ui-ce.es.js';
+
+    // Button event handling
+    document.getElementById('clickButton').addEventListener('click', () => {
+      document.getElementById('clickResult').textContent = 'Button clicked at: ' + new Date().toLocaleTimeString();
+    });
+
+    // Container visibility toggle
+    const containerVisibilityCheckbox = document.getElementById('containerVisibility');
+    const demoContainer = document.getElementById('demoContainer');
+
+    containerVisibilityCheckbox.addEventListener('change', (event) => {
+      demoContainer.setAttribute('is-shown', event.target.checked);
+    });
+
+    // Log to confirm the custom elements are defined
+    console.log('Button custom element defined:', customElements.get('ui-button') === ButtonElement);
+    console.log('Container custom element defined:', customElements.get('ui-container-ce') === UIContainerElement);
+    console.log('Container custom element from ui-ce package');
+  </script>
+</body>
+</html>
