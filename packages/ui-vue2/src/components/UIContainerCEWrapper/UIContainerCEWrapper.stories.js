@@ -13,7 +13,7 @@ export default {
 };
 
 // Template for all stories
-export const Working = (args) => ({
+export const NotWorking = (args) => ({
   components: { UIContainerCEWrapper },
   setup() {
     const isShown = ref(false);
@@ -23,7 +23,7 @@ export const Working = (args) => ({
   },
   template: `
     <div style="display: flex; flex-direction: column">
-      Vue 2 doesn't works: "v-if content" text doesn't appear.
+      Vue 2 doesn't work: "v-if content" text doesn't appear.
     <button @click="isShown = !isShown; counter++">Toggle shown</button>
     <UIContainerCEWrapper :is-shown="isShown">
       Counter: {{counter}}
